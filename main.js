@@ -40,6 +40,7 @@ function ball(x, y, r, color) {
     this.isRight = true;
     this.update = function () {
         ctx = myGameArea.context;
+        ctx.beginPath();
         ctx.fillStyle = color;
         ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
         ctx.fill();
