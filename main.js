@@ -6,6 +6,7 @@ var myGameArea = {
         this.context = this.canvas.getContext("2d");
         document.body.insertBefore(this.canvas, document.body.childNodes[0]);
         this.interval = setInterval(updateGameArea, 20);
+        this.frameNo = 0;
         window.addEventListener('keydown', function (e) {
             myGameArea.keys = (myGameArea.keys || []);
             myGameArea.keys[e.keyCode] = true;
@@ -24,15 +25,21 @@ var myGameArea = {
 }
 var playerSpeed = 10;
 var ballSpeed = 5;
+var obstacleSpeed = 3;
+var obstaclesRate = 10;
 var myBall;
 var myPlayer;
+var myObstacles = [];
 
 function startGame() {
     myGameArea.start();
     myBall = new ball(200, 200, 5, "red");
     myPlayer = new player(100, 30, "black", 400, 500);
 }
-
+function everyInterval(n) {
+    if ((myGameArea.frameNo / n) % 1 == 0) { return true; }
+    return false;
+}
 function ball(x, y, r, color) {
     this.x = x;
     this.y = y;
@@ -74,7 +81,7 @@ function player(width, height, color, x, y) {
         ctx.fillStyle = color;
         ctx.fillRect(this.x, this.y, this.width, this.height);
     }
-    this.collusion = function (otherObj) {
+    this.crash = function (otherObj) {
         var myleft = this.x;
         var myright = this.x + this.width;
         var mytop = this.y;
@@ -90,16 +97,45 @@ function player(width, height, color, x, y) {
         return crash;
     }
 }
+
+function obstacle(width, height, color, x, y) {
+    this.width = width;
+    this.height = height;
+    this.x = x;
+    this.y = y;
+    this.isHorizontal = Math.random() >= 0.5;
+    this.isRight = Math.random() >= 0.5;
+    this.update = function () {
+        ctx = myGameArea.context;
+        ctx.fillStyle = color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+}
+
 function updateGameArea() {
     // check collusions
     checkCollusions();
     // clear game area
     myGameArea.clear();
+
+    // move frame and create anoter obstacle
+    createObstacles();
+    myGameArea.frameNo += 1;
+
     // move all objects
     moveObjects();
     // draw objects in new locations
     myBall.update();
     myPlayer.update();
+}
+
+function createObstacles() {
+    if (everyInterval(100)) {
+        // (max - min) + min;
+        x = Math.floor(Math.random() * (myGameArea.canvas.width - 50) + 50 );
+        y = Math.floor(Math.random() * (myGameArea.canvas.height - 20) + 20);
+        myObstacles.push(new obstacle(50, 20, "green", x, y));
+    }
 }
 
 function moveObjects() {
@@ -121,10 +157,49 @@ function moveObjects() {
     else { myBall.x -= ballSpeed; }
     if (myBall.isDown) { myBall.y += ballSpeed; }
     else { myBall.y -= ballSpeed; }
+
+    // to move obstacles
+    for (i = 0; i < myObstacles.length; i += 1) {
+        if (myObstacles[i].isHorizontal) {
+            if (myObstacles[i].isRight) {
+                myObstacles[i].x += obstacleSpeed;
+                // hit right wall
+                if(myObstacles[i].x >= myGameArea.canvas.width)
+                    myObstacles[i].x = -50;
+            }
+            else {
+                myObstacles[i].x -= obstacleSpeed;
+                // hit left wall
+                if(myObstacles[i].x <= -50)
+                    myObstacles[i].x = myGameArea.canvas.width;
+            }
+        } else {
+            if (myObstacles[i].isDown) {
+                myObstacles[i].y += obstacleSpeed;
+                // hit botoom wall
+                if(myObstacles[i].y <= myGameArea.canvas.height)
+                    myObstacles[i].y = -20;
+            }
+            else {
+                myObstacles[i].y -= obstacleSpeed;
+                // hit top wall
+                if(myObstacles[i].y <= -20)
+                    myObstacles[i].y = myGameArea.canvas.height;
+            }
+        }
+        myObstacles[i].update();
+    }
 }
 
 function checkCollusions() {
     // check player hits
+    // player hits obstacles - game over
+    for (i = 0; i < myObstacles.length; i++) {
+        if (myPlayer.crash(myObstacles[i])) {
+            myGameArea.stop();
+            return;
+        }
+    }
     // player hit 4 walls
 
 
@@ -137,6 +212,10 @@ function checkCollusions() {
     if (myBall.y <= 0) { ballHitObj("up"); }
     if (myBall.y >= myGameArea.canvas.height) { ballHitObj("down"); }
     // ball hit brick
+
+
+    // obstacle hit wall
+
 }
 
 function ballHitObj(side) {
