@@ -22,8 +22,6 @@ var myGameArea = {
         clearInterval(this.interval);
     }
 }
-
-
 var playerSpeed = 10;
 var ballSpeed = 5;
 var myBall;
@@ -32,7 +30,7 @@ var myPlayer;
 function startGame() {
     myGameArea.start();
     myBall = new ball(200, 200, 5, "red");
-    myPlayer = new player(100, 80, "black", 400, 500);
+    myPlayer = new player(100, 30, "black", 400, 500);
 }
 
 function ball(x, y, r, color) {
@@ -60,7 +58,7 @@ function ball(x, y, r, color) {
 
         if (myright == otherleft && othertop < this.y && this.y < otherbottom) { ballHitObj("left"); }
         if (myleft == otherright && othertop < this.y && this.y < otherbottom) { ballHitObj("right"); }
-        
+
         if (mybottom == othertop && otherleft < this.x && this.x < otherright) { ballHitObj("down"); }
         if (mytop == otherbottom && otherleft < this.x && this.x < otherright) { ballHitObj("up"); }
     }
@@ -106,10 +104,18 @@ function updateGameArea() {
 
 function moveObjects() {
     // move player
-    if (myGameArea.keys && myGameArea.keys[37]) { myPlayer.x -= playerSpeed; }
-    if (myGameArea.keys && myGameArea.keys[38]) { myPlayer.y -= playerSpeed; }
-    if (myGameArea.keys && myGameArea.keys[39]) { myPlayer.x += playerSpeed; }
-    if (myGameArea.keys && myGameArea.keys[40]) { myPlayer.y += playerSpeed; }
+    if (myGameArea.keys && myGameArea.keys[37]) {
+        if (myPlayer.x != 0) myPlayer.x -= playerSpeed;
+    }
+    if (myGameArea.keys && myGameArea.keys[38]) {
+        if (myPlayer.y != 0) myPlayer.y -= playerSpeed;
+    }
+    if (myGameArea.keys && myGameArea.keys[39]) {
+        if ((myPlayer.x + myPlayer.width) != myGameArea.canvas.width) myPlayer.x += playerSpeed;
+    }
+    if (myGameArea.keys && myGameArea.keys[40]) {
+        if ((myPlayer.y + myPlayer.height) != myGameArea.canvas.height) myPlayer.y += playerSpeed;
+    }
     // move ball
     if (myBall.isRight) { myBall.x += ballSpeed; }
     else { myBall.x -= ballSpeed; }
