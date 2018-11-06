@@ -26,18 +26,23 @@ var myGameArea = {
 var playerSpeed = 10;
 var ballSpeed = 5;
 var obstacleSpeed = 3;
-var obstaclesRate = 10;
+var obstaclesRate = 100;
 var myBall;
 var myPlayer;
 var myObstacles = [];
+var myScore;
 
 function startGame() {
     myGameArea.start();
     myBall = new ball(200, 200, 5, "red");
-    myPlayer = new player(100, 30, "black", 400, 500);
+    myPlayer = new player(60, 30, "black", 400, 500);
+    myScore = new player("30px", "Consolas", "black", 750, 30, "text");
 }
 function everyInterval(n) {
-    if ((myGameArea.frameNo / n) % 1 == 0) { return true; }
+    if ((myGameArea.frameNo / n) % 1 == 0) {
+        obstaclesRate -= 1;
+        return true;
+    }
     return false;
 }
 function ball(x, y, r, color) {
@@ -63,23 +68,43 @@ function ball(x, y, r, color) {
         var othertop = otherObj.y;
         var otherbottom = otherObj.y + otherObj.height;
 
-        if (myright == otherleft && othertop < this.y && this.y < otherbottom) { ballHitObj("left"); }
-        if (myleft == otherright && othertop < this.y && this.y < otherbottom) { ballHitObj("right"); }
-
-        if (mybottom == othertop && otherleft < this.x && this.x < otherright) { ballHitObj("down"); }
-        if (mytop == otherbottom && otherleft < this.x && this.x < otherright) { ballHitObj("up"); }
+        var boom = false;
+        if (myright == otherleft && othertop < this.y && this.y < otherbottom) {
+            ballHitObj("left");
+            boom = true;
+        }
+        if (myleft == otherright && othertop < this.y && this.y < otherbottom) {
+            ballHitObj("right");
+            boom = true;
+        }
+        if (mybottom == othertop && otherleft < this.x && this.x < otherright) {
+            ballHitObj("down");
+            boom = true;
+        }
+        if (mytop == otherbottom && otherleft < this.x && this.x < otherright) {
+            ballHitObj("up");
+            boom = true;
+        }
+        return boom;
     }
 }
 
-function player(width, height, color, x, y) {
+function player(width, height, color, x, y, type) {
+    this.type = type;
     this.width = width;
     this.height = height;
     this.x = x;
     this.y = y;
     this.update = function () {
         ctx = myGameArea.context;
-        ctx.fillStyle = color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
+        if (this.type == "text") {
+            ctx.font = this.width + " " + this.height;
+            ctx.fillStyle = color;
+            ctx.fillText(this.text, this.x, this.y);
+        } else {
+            ctx.fillStyle = color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
     }
     this.crash = function (otherObj) {
         var myleft = this.x;
@@ -122,6 +147,10 @@ function updateGameArea() {
     createObstacles();
     myGameArea.frameNo += 1;
 
+
+    myScore.text = "SCORE: " + myGameArea.frameNo;
+    myScore.update();
+
     // move all objects
     moveObjects();
     // draw objects in new locations
@@ -130,10 +159,14 @@ function updateGameArea() {
 }
 
 function createObstacles() {
-    if (everyInterval(100)) {
-        // (max - min) + min;
-        x = Math.floor(Math.random() * (myGameArea.canvas.width - 50) + 50 );
-        y = Math.floor(Math.random() * (myGameArea.canvas.height - 20) + 20);
+    if (everyInterval(obstaclesRate)) {
+        if (Math.random() >= 0.5) {
+            x = Math.floor(Math.random() * (myGameArea.canvas.width - 50) + 50);
+            y = 0;
+        } else {
+            y = Math.floor(Math.random() * (myGameArea.canvas.height - 20) + 20);
+            x = 0;
+        }
         myObstacles.push(new obstacle(50, 20, "green", x, y));
     }
 }
@@ -158,32 +191,32 @@ function moveObjects() {
     if (myBall.isDown) { myBall.y += ballSpeed; }
     else { myBall.y -= ballSpeed; }
 
-    // to move obstacles
+    // move obstacles
     for (i = 0; i < myObstacles.length; i += 1) {
         if (myObstacles[i].isHorizontal) {
             if (myObstacles[i].isRight) {
                 myObstacles[i].x += obstacleSpeed;
                 // hit right wall
-                if(myObstacles[i].x >= myGameArea.canvas.width)
+                if (myObstacles[i].x >= myGameArea.canvas.width)
                     myObstacles[i].x = -50;
             }
             else {
                 myObstacles[i].x -= obstacleSpeed;
                 // hit left wall
-                if(myObstacles[i].x <= -50)
+                if (myObstacles[i].x <= -50)
                     myObstacles[i].x = myGameArea.canvas.width;
             }
         } else {
             if (myObstacles[i].isDown) {
                 myObstacles[i].y += obstacleSpeed;
                 // hit botoom wall
-                if(myObstacles[i].y <= myGameArea.canvas.height)
+                if (myObstacles[i].y <= myGameArea.canvas.height)
                     myObstacles[i].y = -20;
             }
             else {
                 myObstacles[i].y -= obstacleSpeed;
                 // hit top wall
-                if(myObstacles[i].y <= -20)
+                if (myObstacles[i].y <= -20)
                     myObstacles[i].y = myGameArea.canvas.height;
             }
         }
@@ -192,12 +225,16 @@ function moveObjects() {
 }
 
 function checkCollusions() {
-    // check player hits
-    // player hits obstacles - game over
+
     for (i = 0; i < myObstacles.length; i++) {
+        // obstacles hits player - game over
         if (myPlayer.crash(myObstacles[i])) {
             myGameArea.stop();
             return;
+        }
+        // obstacles hits ball - remove obstacle - change ball direction
+        if (myBall.collusion(myObstacles[i])) {
+            myObstacles.splice(i, 1);
         }
     }
     // player hit 4 walls
@@ -212,9 +249,6 @@ function checkCollusions() {
     if (myBall.y <= 0) { ballHitObj("up"); }
     if (myBall.y >= myGameArea.canvas.height) { ballHitObj("down"); }
     // ball hit brick
-
-
-    // obstacle hit wall
 
 }
 
